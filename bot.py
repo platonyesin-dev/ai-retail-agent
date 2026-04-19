@@ -39,6 +39,7 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     5. SEARCHING: ALWAYS use LIKE with wildcards (e.g., WHERE name LIKE '%organic milk%'). Do NOT filter by category unless explicitly asked.
     6. SINGLE COMMAND: NEVER write more than one SQL statement. If the user asks to "update and print", ONLY write the UPDATE command with the RETURNING clause.
     7. FORMATTING: ONLY output the raw SQL code. No markdown or quotes.
+    8. CRITICAL RULE: NEVER generate an UPDATE or DELETE command without a specific WHERE clause. You must always isolate the exact product or category the user is asking for using WHERE name LIKE '%...%' or WHERE category LIKE '%...%'.
     """
 
     try:
@@ -57,6 +58,11 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # 2. CLEAN FIRST (Strip the markdown before we check the intent!)
         clean_sql = ai_output.replace('```sql', '').replace('```', '').replace('SQL', '').replace('sql', '').strip()
         
+        # --- 🛡️ THE SAFETY GUARD ---
+        if ("UPDATE" in clean_sql.upper() or "DELETE" in clean_sql.upper()) and "WHERE" not in clean_sql.upper():
+            await status_message.edit_text("⚠️ Safety Alert: The AI tried to update all products at once. I blocked the transaction to protect the database. Please try rephrasing your request!")
+            return # This stops the rest of the code from running
+        
         # --- INTENT ROUTING ---
         
         # SCENARIO A: The user wants to change data (Update, Add, or Remove)
@@ -74,13 +80,13 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Figure out how many rows changed (using max safely covers UPDATES and DELETES)
             rows_changed = max(cursor.rowcount, len(results))
             
-            # Notice we completely removed conn.commit()!
+            # Notice we completely removed conn.commit() to simplify saving things
             conn.close()
             
             if rows_changed > 0:
                 await status_message.edit_text(f"✅ Database Updated! Changed {rows_changed} item(s).\nExecuted:\n{clean_sql}")
                 
-                # INTENT CHECK: Did they also ask to print the tag after updating?
+                # check if printing tad was asked
                 user_wants_tag = "print" in user_message.lower() or "tag" in user_message.lower()
                 
                 # If they asked for a tag, and we actually updated something
@@ -89,7 +95,7 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     try:
                         item = results[0] 
                         
-                        # Hand the brand new data directly to your printer!
+                        # call printer for that tag
                         image_path = printer.generate_price_tag(
                             product_name=item[1],
                             item_id=item[0],
@@ -98,6 +104,7 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             discount_type=item[6]
                         )
                         
+                        # get that specific tag from the directory 
                         if image_path:
                             with open(image_path, "rb") as tag_image:
                                 await update.message.reply_photo(
@@ -129,7 +136,8 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     response_text += f"📅 Days on shelf: {row[5]}\n\n"
                 
                 await status_message.edit_text(response_text)
-                
+                # In case i want to look and also print that tag 
+                # Just use the same chunck of code from scenario A
                 user_wants_tag = "print" in user_message.lower() or "tag" in user_message.lower()
                 
                 if user_wants_tag:
@@ -141,7 +149,7 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         # Database mapping: 
                         # item[0]=id, item[1]=name, item[3]=base_price, item[4]=current_price, item[6]=discount_type
                         
-                        # 3. DIRECT HAND-OFF: Pass the exact database info straight to your printer function!
+                        # 3. pass info to print the tag
                         image_path = printer.generate_price_tag(
                             product_name=item[1],
                             item_id=item[0],
