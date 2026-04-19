@@ -1,16 +1,28 @@
 # 🛒 AI Retail Database Agent
 
+<img width="735" height="401" alt="Screenshot 2026-04-19 at 23 47 07" src="https://github.com/user-attachments/assets/991020d8-0575-4e1c-b10f-cab52de247ed" />
+
+
+
 An intelligent, multi-agent Telegram bot that allows store managers to control a retail database and instantly generate graphical price tags entirely through natural language. 
 
 Instead of navigating complex software or writing SQL, users can simply text the bot commands like, *"Apply a 36% discount to the organic milk and print a member card tag,"* and the AI will handle the database transaction and render the graphics in seconds.
 
 ### ✨ Key Features
+
+<img width="484" height="430" alt="Screenshot 2026-04-19 at 23 47 18" src="https://github.com/user-attachments/assets/552cb3ae-f645-46c3-be2f-284f4aa645ef" />
+
+
 * **Natural Language to SQL:** Powered by Llama 3.3, the agent translates conversational text into perfectly formatted SQLite `UPDATE`, `INSERT`, `DELETE`, or `SELECT` commands.
 * **Smart Intent Routing:** Custom Python logic intercepts the AI's output and routes it to the correct database pipeline, preventing accidental data overwrites and distinguishing between data-viewing and data-altering requests.
 * **Dynamic Graphic Rendering:** Integrates with the Pillow (PIL) library to automatically draw highly customized, e-ink ready price tags. It dynamically inserts live database variables (Product ID, new prices, discount percentages, and dynamic QR codes) onto pre-designed `.png` templates.
 * **Real-Time Data Handling:** Utilizes advanced SQLite operations (like `RETURNING` clauses and Python `isolation_level=None` Autocommit) to read and write data simultaneously without causing lock conflicts.
 
 ### 🧠 System Architecture
+
+<img width="1011" height="298" alt="Screenshot 2026-04-19 at 23 45 41" src="https://github.com/user-attachments/assets/02203ff5-bea4-47a4-953c-1d17ed6fcfe1" />
+
+
 1. **User Input:** User sends a natural language message via Telegram.
 2. **NLP Engine:** Groq processes the text and generates raw SQL.
 3. **Python Router:** The system cleans the output and determines the query intent.
